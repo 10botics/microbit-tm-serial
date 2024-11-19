@@ -1,0 +1,11 @@
+version: "3.9"  # Specify a compatible version of the Docker Compose file format
+
+services:
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./html:/usr/share/nginx/html
+    restart: unless-stopped
+

@@ -1,0 +1,31 @@
+# Node modules (if using Node.js for build tools)
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.swp
+
+# Build directories (if using a build process)
+dist/
+build/
+
+# IDE specific files
+.vscode/
+.idea/
+
+# SASS cache (if using SASS)
+.sass-cache/
+
+# Coverage directory used by testing tools
+coverage/
+
+# Environment variables file
+.env
