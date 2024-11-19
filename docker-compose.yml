@@ -13,7 +13,7 @@ services:
 
 networks:
   default:
-    external:
-      name: docker07
+    name: docker07
+    external: true
 
 
