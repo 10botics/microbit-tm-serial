@@ -11,4 +11,9 @@ services:
       - LETSENCRYPT_HOST=microbit.10botics.com
       - TZ=Asia/Hong_Kong
 
+networks:
+  default:
+    external:
+      name: docker07
+
 
