@@ -152,7 +152,7 @@
             // Log the message in the new text area with local time
             const logElement = document.getElementById('log');
             const currentTime = new Date().toLocaleTimeString();
-            logElement.value += `[${currentTime}] Sent to serial: ${highestClass}\n`;
+            logElement.value = `[${currentTime}] Sent to serial: ${highestClass}\n` + logElement.value;
 
             if (writer) {
                 await writer.write(data);
