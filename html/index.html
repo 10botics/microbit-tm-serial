@@ -155,8 +155,7 @@
             logElement.value += `[${currentTime}] Sent to serial: ${highestClass}\n`;
 
             if (writer) {
-                
-                // await writer.write(data);
+                await writer.write(data);
             }
         }
     }
