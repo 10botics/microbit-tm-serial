@@ -24,49 +24,52 @@
     <h2 class="mt-4">Step 2: Connect to Micro:bit</h2>
     <div class="d-flex mt-3">
         <button id="connect" class="btn btn-primary me-2">Connect to Micro:bit</button>
+        
+
+        <p id="status" class="mt-3"></p>
     </div>
 
     <!-- Step 3: Start the model prediction -->
     <h2 class="mt-4">Step 3: Start Model Prediction</h2>
-    <div class="d-flex mt-3">
-        <button type="button" onclick="init()" class="btn btn-secondary">Start</button>
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <div id="webcam-container" class="mt-3" style="background-color: #e9ecef; display: flex; align-items: center; justify-content: center; height: 400px;">
+                <span style="color: #6c757d;">Press Start</span>
+            </div>
+            <div id="label-container" class="mt-3"></div>
+            <p id="class-status" class="mt-3"></p>
+            <button type="button" onclick="init()" class="btn btn-secondary w-100 mt-3">Start</button>
+        </div>
+        <div class="col-md-6">
+            <div class="mt-3">
+                <input type="checkbox" id="activate-speed-control" checked>
+                <label for="activate-speed-control">Activate speed control</label>
+            </div>
+            <div class="mt-3">
+                <label for="forward-speed">Forward/Backward Speed:</label>
+                <input type="range" id="forward-speed" class="form-range" value="40" min="40" max="100" oninput="updateForwardSpeedValue(this.value)">
+                <span id="forward-speed-value">40</span>
+                <small class="form-text text-muted">Adjust the forward speed of the Micro:bit.</small>
+            </div>
+            <div class="mt-3">
+                <label for="turn-speed">Turn Speed:</label>
+                <input type="range" id="turn-speed" class="form-range" value="40" min="40" max="100" oninput="updateTurnSpeedValue(this.value)">
+                <span id="turn-speed-value">40</span>
+                <small class="form-text text-muted">Adjust the turn speed of the Micro:bit.</small>
+            </div>
+            <div class="mt-3">
+                <label for="threshold">Sensitivity:</label>
+                <input type="range" id="threshold" class="form-range" value="10" min="1" max="100" oninput="updateThresholdValue(this.value)">
+                <span id="threshold-value">10</span>
+                <small class="form-text text-muted">Adjust the sensitivity to control how many consecutive detections are needed before sending a message.</small>
+            </div>
+        </div>
     </div>
 
-    <div class="mt-3">
-        <label for="threshold">Sensitivity:</label>
-        <input type="range" id="threshold" class="form-range" value="20" min="1" max="100" oninput="updateThresholdValue(this.value)">
-        <span id="threshold-value">20</span>
-        <small class="form-text text-muted">Adjust the sensitivity to control how many consecutive detections are needed before sending a message.</small>
-    </div>
-
-    <div class="mt-3">
-        <input type="checkbox" id="activate-speed-control" checked>
-        <label for="activate-speed-control">Activate speed control</label>
-    </div>
     
     <div class="mt-3">
-        <label for="forward-speed">Forward Speed:</label>
-        <input type="range" id="forward-speed" class="form-range" value="70" min="40" max="100"
-            oninput="updateForwardSpeedValue(this.value)">
-        <span id="forward-speed-value">70</span>
-        <small class="form-text text-muted">Adjust the forward speed of the Micro:bit.</small>
+        <textarea id="log" class="form-control mt-3" rows="20" cols="80" readonly></textarea>
     </div>
-    
-    <div class="mt-3">
-        <label for="turn-speed">Turn Speed:</label>
-        <input type="range" id="turn-speed" class="form-range" value="70" min="40" max="100"
-            oninput="updateTurnSpeedValue(this.value)">
-        <span id="turn-speed-value">70</span>
-        <small class="form-text text-muted">Adjust the turn speed of the Micro:bit.</small>
-    </div>
-
-    <div id="webcam-container" class="mt-3"></div>
-    <div id="label-container" class="mt-3"></div>
-
-    <p id="status" class="mt-3"></p>
-    <textarea id="log" class="form-control mt-3" rows="20" cols="80" readonly></textarea>
-
-
     
 </div>
 
@@ -91,8 +94,8 @@
         maxPredictions = model.getTotalClasses();
 
         const flip = true;
-        const width = 200;
-        const height = 200;
+        const width = 400;
+        const height = 400;
         webcam = new tmImage.Webcam(width, height, flip);
         await webcam.setup();
 
@@ -115,13 +118,9 @@
         window.requestAnimationFrame(loop);
     }
 
-
-
     function updateThresholdValue(value) {
         document.getElementById('threshold-value').textContent = value;
-    }
-   
-
+    }   
     
     function updateForwardSpeedValue(value) {
         document.getElementById('forward-speed-value').textContent = value;
@@ -156,14 +155,19 @@
         let highestClass = '';
 
         for (let i = 0; i < maxPredictions; i++) {
-            const classPrediction = prediction[i].className + ': ' + prediction[i].probability.toFixed(2);
+            predictionClassName = prediction[i].className
+            const classPrediction = predictionClassName + ': ' + prediction[i].probability.toFixed(2);
             labelContainer.childNodes[i].innerHTML = classPrediction;
+            labelContainer.childNodes[i].id = predictionClassName;
+            labelContainer.childNodes[i].classList.remove('bg-success');
 
             if (prediction[i].probability > highestProbability) {
                 highestProbability = prediction[i].probability;
                 highestClass = prediction[i].className;
             }
         }
+
+        document.getElementById(highestClass).classList.add('bg-success');
 
         // console.log(`Highest Class: ${highestClass}, Consecutive Count: ${consecutiveCount}, Last Sent Class: ${lastSentClass}`);
 
@@ -174,14 +178,14 @@
         }
 
         lastClass = highestClass;
-        document.getElementById('status').textContent = `Highest Class: ${highestClass}, Consecutive Count: ${consecutiveCount}, Last Class: ${lastClass}`
+        document.getElementById('class-status').textContent = `Highest Class: ${highestClass}, Consecutive Count: ${consecutiveCount}, Last Class: ${lastClass}`
 
         if (consecutiveCount > parseInt(document.getElementById('threshold').value) && highestClass !== lastSentClass) {
             let dataToSend = highestClass;
             const isSpeedControlActive = document.getElementById('activate-speed-control').checked;
 
             if (isSpeedControlActive) {
-                if (highestClass === "forward") {
+                if (highestClass === "forward" || highestClass === "backward") {
                     const forwardSpeed = document.getElementById('forward-speed').value;
                     dataToSend += `,${forwardSpeed}`;
                 } else if (highestClass === "left" || highestClass === "right") {
