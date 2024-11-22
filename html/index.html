@@ -10,7 +10,22 @@
 
 
 <div class="container mt-5">
-    <h1>Micro:bit Serial Communication</h1>
+    <h1>Micro:bit Teachable Machine Controller</h1>
+
+    <div class="mt-3">
+        <p>This is a simple WASD controller that sends the prediction of a Teachable Machine model to a microbit via serial communication. </p>
+        <p> The model should output the following classes:</p>
+        <ul>
+            <li>forward</li>
+            <li>backward</li>
+            <li>left</li>
+            <li>right</li>
+            <li>stop</li>
+        </ul>
+
+    </div>
+
+    
 
     <!-- Step 1: Ask for the model URL -->
     <h2 class="mt-4">Step 1: Enter Model URL</h2>
@@ -66,7 +81,7 @@
         </div>
     </div>
 
-    
+    <h3 class="mt-4">Serial Communication Log</h3>
     <div class="mt-3">
         <textarea id="log" class="form-control mt-3" rows="20" cols="80" readonly></textarea>
     </div>
