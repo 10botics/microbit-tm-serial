@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Micro:bit Serial Communication</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+
+<div class="container mt-5">
+    <h1>Micro:bit Teachable Machine Controller</h1>
+
+    <div class="mt-3">
+        <p>This is a simple WASD controller that sends the prediction of a Teachable Machine model to a microbit via serial communication. </p>
+        <p> The model should output the following classes:</p>
+        <ul>
+            <li>forward</li>
+            <li>backward</li>
+            <li>left</li>
+            <li>right</li>
+            <li>stop</li>
+        </ul>
+
+    </div>
+
+    
+
+    <!-- Step 1: Ask for the model URL -->
+    <h2 class="mt-4">Step 1: Enter Model URL</h2>
+    <div class="mt-3">
+        <label for="model-url">Model URL:</label>
+        <input type="text" id="model-url" class="form-control" value="https://teachablemachine.withgoogle.com/models/x7UPTyTeq/">
+        <small class="form-text text-muted">Enter the URL of your Teachable Machine model.</small>
+    </div>
+
+    <!-- Step 2: Ask the user to connect Micro:bit -->
+    <h2 class="mt-4">Step 2: Connect to Micro:bit</h2>
+    <div class="d-flex mt-3">
+        <button id="connect" class="btn btn-primary me-2">Connect to Micro:bit</button>
+        
+
+        <p id="status" class="mt-3"></p>
+    </div>
+
+    <!-- Step 3: Start the model prediction -->
+    <h2 class="mt-4">Step 3: Start Model Prediction</h2>
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <div id="webcam-container" class="mt-3" style="background-color: #e9ecef; display: flex; align-items: center; justify-content: center; height: 400px;">
+                <span style="color: #6c757d;">Press Start</span>
+            </div>
+            <div id="label-container" class="mt-3"></div>
+            <p id="class-status" class="mt-3"></p>
+            <button type="button" onclick="init()" class="btn btn-secondary w-100 mt-3">Start</button>
+        </div>
+        <div class="col-md-6">
+            <div class="mt-3">
+                <input type="checkbox" id="activate-speed-control" checked>
+                <label for="activate-speed-control">Activate speed control</label>
+            </div>
+            <div class="mt-3">
+                <label for="forward-speed">Forward/Backward Speed:</label>
+                <input type="range" id="forward-speed" class="form-range" value="50" min="20" max="100" oninput="updateForwardSpeedValue(this.value)">
+                <span id="forward-speed-value">50</span>
+                <small class="form-text text-muted">Adjust the forward speed of the Micro:bit.</small>
+            </div>
+            <div class="mt-3">
+                <label for="turn-speed">Turn Speed:</label>
+                <input type="range" id="turn-speed" class="form-range" value="50" min="20" max="100" oninput="updateTurnSpeedValue(this.value)">
+                <span id="turn-speed-value">50</span>
+                <small class="form-text text-muted">Adjust the turn speed of the Micro:bit.</small>
+            </div>
+            <div class="mt-3">
+                <label for="threshold">Sensitivity:</label>
+                <input type="range" id="threshold" class="form-range" value="10" min="1" max="100" oninput="updateThresholdValue(this.value)">
+                <span id="threshold-value">10</span>
+                <small class="form-text text-muted">Adjust the sensitivity to control how many consecutive detections are needed before sending a message.</small>
+            </div>
+        </div>
+    </div>
+
+    <h3 class="mt-4">Serial Communication Log</h3>
+    <div class="mt-3">
+        <textarea id="log" class="form-control mt-3" rows="20" cols="80" readonly></textarea>
+    </div>
+    
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js"></script>
+<script type="text/javascript">
+    // More API functions here:
+    // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/image
+
+    let model, webcam, labelContainer, maxPredictions;
+    let isIos = false; 
+    if (window.navigator.userAgent.indexOf('iPhone') > -1 || window.navigator.userAgent.indexOf('iPad') > -1) {
+      isIos = true;
+    }
+
+    async function init() {
+        const URL = document.getElementById('model-url').value;
+        const modelURL = URL + 'model.json';
+        const metadataURL = URL + 'metadata.json';
+
+        model = await tmImage.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        const flip = true;
+        const width = 400;
+        const height = 400;
+        webcam = new tmImage.Webcam(width, height, flip);
+        await webcam.setup();
+
+        if (isIos) {
+            document.getElementById('webcam-container').appendChild(webcam.webcam);
+            const webCamVideo = document.getElementsByTagName('video')[0];
+            webCamVideo.setAttribute("playsinline", true);
+            webCamVideo.muted = "true";
+            webCamVideo.style.width = width + 'px';
+            webCamVideo.style.height = height + 'px';
+        } else {
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+        }
+
+        labelContainer = document.getElementById('label-container');
+        for (let i = 0; i < maxPredictions; i++) {
+            labelContainer.appendChild(document.createElement('div'));
+        }
+        webcam.play();
+        window.requestAnimationFrame(loop);
+    }
+
+    function updateThresholdValue(value) {
+        document.getElementById('threshold-value').textContent = value;
+    }   
+    
+    function updateForwardSpeedValue(value) {
+        document.getElementById('forward-speed-value').textContent = value;
+    }
+
+    function updateTurnSpeedValue(value) {
+        document.getElementById('turn-speed-value').textContent = value;
+    }
+
+    async function loop() {
+        webcam.update(); // update the webcam frame
+        await predict();
+        window.requestAnimationFrame(loop);
+    }
+
+    let lastClass = '';
+    let lastSentClass = '';
+    let consecutiveCount = 0;
+    
+
+    // run the webcam image through the image model
+    async function predict() {
+        // predict can take in an image, video or canvas html element
+        let prediction;
+        if (isIos) {
+            prediction = await model.predict(webcam.webcam);
+        } else {
+            prediction = await model.predict(webcam.canvas);
+        }
+
+        let highestProbability = 0;
+        let highestClass = '';
+
+        for (let i = 0; i < maxPredictions; i++) {
+            predictionClassName = prediction[i].className;
+            const classPrediction = predictionClassName + ': ' + prediction[i].probability.toFixed(2);
+            labelContainer.childNodes[i].innerHTML = classPrediction;
+            labelContainer.childNodes[i].id = predictionClassName;
+            labelContainer.childNodes[i].classList.remove('bg-success');
+
+            if (prediction[i].probability > highestProbability) {
+                highestProbability = prediction[i].probability;
+                highestClass = prediction[i].className;
+            }
+        }
+
+        document.getElementById(highestClass).classList.add('bg-success');
+
+        if (highestClass === lastClass) {
+            consecutiveCount++;
+        } else {
+            consecutiveCount = 1;
+        }
+
+        lastClass = highestClass;
+        document.getElementById('class-status').textContent = `Highest Class: ${highestClass}, Consecutive Count: ${consecutiveCount}, Last Class: ${lastClass}`;
+
+        if (consecutiveCount > parseInt(document.getElementById('threshold').value) && highestClass !== lastSentClass) {
+            sendCommand(highestClass);
+            lastSentClass = highestClass;
+        }
+    }
+
+    let port;
+    let writer;
+    let connectButton = document.getElementById('connect');
+    let status = document.getElementById('status');
+
+    connectButton.addEventListener('click', async () => {
+        try {
+            port = await navigator.serial.requestPort();
+            await port.open({ baudRate: 115200 });
+            writer = port.writable.getWriter();
+            connectButton.disabled = true;
+            connectButton.classList.remove('btn-primary');
+            connectButton.classList.add('btn-secondary');
+            status.textContent = 'Connected to Micro:bit';
+            status.classList.remove('text-danger');
+        } catch (error) {
+            status.textContent = 'Failed to connect: ' + error;
+            status.classList.add('text-danger');
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        let command = '';
+        switch (event.key.toLowerCase()) {
+            case 'w':
+            case 'arrowup':
+                command = 'forward';
+                break;
+            case 'a':
+            case 'arrowleft':
+                command = 'left';
+                break;
+            case 's':
+            case 'arrowdown':
+                command = 'backward';
+                break;
+            case 'd':
+            case 'arrowright':
+                command = 'right';
+                break;
+            case ' ':
+                command = 'stop';
+                event.preventDefault(); // Prevent spacebar scrolling
+                break;
+            default:
+                return; // Exit if the key is not one of the specified keys
+        }
+
+        sendCommand(command);
+    });
+
+    async function sendCommand(command) {
+        let dataToSend = command;
+        const isSpeedControlActive = document.getElementById('activate-speed-control').checked;
+
+        if (isSpeedControlActive) {
+            if (command === "forward" || command === "backward") {
+                const forwardSpeed = document.getElementById('forward-speed').value;
+                dataToSend += `,${forwardSpeed}`;
+            } else if (command === "left" || command === "right") {
+                const turnSpeed = document.getElementById('turn-speed').value;
+                dataToSend += `,${turnSpeed}`;
+            }
+        }
+
+        const data = new TextEncoder().encode(dataToSend + '\n');
+        
+        console.log("send to serial: " + dataToSend);
+        
+        // Log the message in the new text area with local time
+        const logElement = document.getElementById('log');
+        const currentTime = new Date().toLocaleTimeString();
+        logElement.value = `[${currentTime}] Sent to serial: ${dataToSend}\n` + logElement.value;
+
+        if (writer) {
+            await writer.write(data);
+        }
+    }
+
+</script>
+<footer class="bg-light text-center py-3 mt-5">
+    <div class="container">
+        <p class="mb-0">&copy; 2024 10Botics Ltd. All rights reserved. Visit us at <a href="https://10botics.com" class="text-decoration-none">10botics.com</a></p>
+        <p class="mb-0">Please contact us for permission to use.</p>
+    </div>
+</footer>
+</body>
+</html>
