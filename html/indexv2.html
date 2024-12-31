@@ -36,6 +36,12 @@
             min-width: 70px;
             text-align: center;
         }
+        .model-btn {
+            width: 140px;
+            text-align: center;
+            white-space: nowrap;
+            margin: 0.25rem;
+        }
     </style>
 </head>
 <body>
@@ -156,6 +162,22 @@
         </div>
         <div class="col-md-6">
             <div class="mt-3">
+                <h4>Model Output</h4>
+                <div class="d-flex flex-column align-items-center mt-4">
+                    <div class="mb-2">
+                        <button id="model-forward" class="btn btn-outline-secondary model-btn">Forward</button>
+                    </div>
+                    <div>
+                        <button id="model-left" class="btn btn-outline-secondary model-btn">Left</button>
+                        <button id="model-backward" class="btn btn-outline-secondary model-btn">Backward</button>
+                        <button id="model-right" class="btn btn-outline-secondary model-btn">Right</button>
+                    </div>
+                    <div class="mt-3">
+                        <button id="model-stop" class="btn btn-outline-secondary model-btn">Stop</button>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3">
                 <label for="threshold">Sensitivity:</label>
                 <div class="speed-control">
                     <button class="speed-btn" onclick="adjustSensitivity(-1)">-</button>
@@ -200,32 +222,43 @@
         const modelURL = modelUrl + 'model.json';
         const metadataURL = modelUrl + 'metadata.json';
 
-        model = await tmImage.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
+        try {
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
 
-        const flip = true;
-        const width = 400;
-        const height = 400;
-        webcam = new tmImage.Webcam(width, height, flip);
-        await webcam.setup();
+            const flip = true;
+            const width = 400;
+            const height = 400;
+            webcam = new tmImage.Webcam(width, height, flip);
+            await webcam.setup();
 
-        if (isIos) {
-            document.getElementById('webcam-container').appendChild(webcam.webcam);
-            const webCamVideo = document.getElementsByTagName('video')[0];
-            webCamVideo.setAttribute("playsinline", true);
-            webCamVideo.muted = "true";
-            webCamVideo.style.width = width + 'px';
-            webCamVideo.style.height = height + 'px';
-        } else {
-            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            if (isIos) {
+                document.getElementById('webcam-container').appendChild(webcam.webcam);
+                const webCamVideo = document.getElementsByTagName('video')[0];
+                webCamVideo.setAttribute("playsinline", true);
+                webCamVideo.muted = "true";
+                webCamVideo.style.width = width + 'px';
+                webCamVideo.style.height = height + 'px';
+            } else {
+                document.getElementById("webcam-container").appendChild(webcam.canvas);
+            }
+
+            labelContainer = document.getElementById('label-container');
+            for (let i = 0; i < maxPredictions; i++) {
+                labelContainer.appendChild(document.createElement('div'));
+            }
+            webcam.play();
+            window.requestAnimationFrame(loop);
+
+            // Disable the start button only after everything is initialized
+            const startButton = document.querySelector('[onclick="init()"]');
+            startButton.disabled = true;
+            startButton.classList.remove('btn-primary');
+            startButton.classList.add('btn-secondary');
+            
+        } catch (error) {
+            alert('Error initializing model: ' + error.message);
         }
-
-        labelContainer = document.getElementById('label-container');
-        for (let i = 0; i < maxPredictions; i++) {
-            labelContainer.appendChild(document.createElement('div'));
-        }
-        webcam.play();
-        window.requestAnimationFrame(loop);
     }
 
     function updateThresholdValue(value) {
@@ -249,11 +282,8 @@
     let lastClass = '';
     let lastSentClass = '';
     let consecutiveCount = 0;
-    
 
-    // run the webcam image through the image model
     async function predict() {
-        // predict can take in an image, video or canvas html element
         let prediction;
         if (isIos) {
             prediction = await model.predict(webcam.webcam);
@@ -264,33 +294,58 @@
         let highestProbability = 0;
         let highestClass = '';
 
-        for (let i = 0; i < maxPredictions; i++) {
-            predictionClassName = prediction[i].className;
-            const classPrediction = predictionClassName + ': ' + prediction[i].probability.toFixed(2);
-            labelContainer.childNodes[i].innerHTML = classPrediction;
-            labelContainer.childNodes[i].id = predictionClassName;
-            labelContainer.childNodes[i].classList.remove('bg-success');
+        // Reset all buttons to default state
+        const directions = ['forward', 'backward', 'left', 'right', 'stop'];
+        directions.forEach(dir => {
+            const btn = document.getElementById('model-' + dir);
+            if (dir !== lastSentClass) {  // Only reset buttons that aren't the last sent command
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-outline-secondary');
+            }
+        });
 
-            if (prediction[i].probability > highestProbability) {
-                highestProbability = prediction[i].probability;
-                highestClass = prediction[i].className;
+        for (let i = 0; i < maxPredictions; i++) {
+            const className = prediction[i].className;
+            const probability = prediction[i].probability;
+            const percentage = (probability * 100).toFixed(0);
+            
+            // Update button text with probability
+            const btn = document.getElementById('model-' + className);
+            btn.textContent = `${className} (${percentage}%)`;
+
+            if (probability > highestProbability) {
+                highestProbability = probability;
+                highestClass = className;
             }
         }
 
-        document.getElementById(highestClass).classList.add('bg-success');
-
+        // Update consecutive count
         if (highestClass === lastClass) {
             consecutiveCount++;
         } else {
-            consecutiveCount = 1;
+            consecutiveCount = 0;
         }
-
         lastClass = highestClass;
-        document.getElementById('class-status').textContent = `Highest Class: ${highestClass}, Consecutive Count: ${consecutiveCount}, Last Class: ${lastClass}`;
 
-        if (consecutiveCount > parseInt(document.getElementById('threshold').value) && highestClass !== lastSentClass) {
-            sendCommand(highestClass);
-            lastSentClass = highestClass;
+        // Only highlight and send command when threshold is reached
+        if (consecutiveCount > parseInt(document.getElementById('threshold').value)) {
+            if (highestClass && highestClass !== lastSentClass) {
+                // Reset previous command button
+                if (lastSentClass) {
+                    const lastBtn = document.getElementById('model-' + lastSentClass);
+                    lastBtn.classList.remove('btn-primary');
+                    lastBtn.classList.add('btn-outline-secondary');
+                }
+                
+                // Highlight the new button
+                const highestBtn = document.getElementById('model-' + highestClass);
+                highestBtn.classList.remove('btn-outline-secondary');
+                highestBtn.classList.add('btn-primary');
+                
+                // Send the command
+                sendCommand(highestClass);
+                lastSentClass = highestClass;
+            }
         }
     }
 
