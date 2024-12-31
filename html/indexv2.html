@@ -5,6 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Micro:bit Serial Communication</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 0.5rem 0;
+        }
+        .speed-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background-color: #0d6efd;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .speed-btn:hover {
+            background-color: #0b5ed7;
+        }
+        .speed-value {
+            font-size: 2rem;
+            font-weight: bold;
+            min-width: 70px;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
 
@@ -27,35 +59,53 @@
 
     
 
-    <!-- Step 1: Ask for the model URL -->
-    <h2 class="mt-4">Step 1: Enter Model URL</h2>
-    <div class="mt-3">
-        <label for="model-url">Model URL:</label>
-        <input type="text" id="model-url" class="form-control">
-        <small class="form-text text-muted">Enter the URL of your Teachable Machine model.<br>
-        Example: https://teachablemachine.withgoogle.com/models/x7UPTyTeq/</small>
-    </div>
-
-    <!-- Step 2: Ask the user to connect Micro:bit -->
-    <h2 class="mt-4">Step 2: Connect to Micro:bit</h2>
-    <div class="d-flex mt-3">
-        <button id="connect" class="btn btn-primary me-2">Connect to Micro:bit</button>
-        
-
-        <p id="status" class="mt-3"></p>
-    </div>
-
-    <!-- Step 3: Start the model prediction -->
-    <h2 class="mt-4">Step 3: Start Model Prediction</h2>
-    <div class="row mt-3">
-        <div class="col-md-6">
-            <div id="webcam-container" class="mt-3" style="background-color: #e9ecef; display: flex; align-items: center; justify-content: center; height: 400px;">
-                <span style="color: #6c757d;">Press Start</span>
-            </div>
-            <div id="label-container" class="mt-3"></div>
-            <p id="class-status" class="mt-3"></p>
-            <button type="button" onclick="init()" class="btn btn-secondary w-100 mt-3">Start</button>
+    <!-- Step 1: Ask for Micro:bit Connection -->
+    <h2 class="mt-4">Step 1: Connect to Micro:bit</h2>
+    <div class="d-flex mt-3 align-items-center">
+        <button id="connect" class="btn btn-primary me-2">
+            <i class="bi bi-usb me-2"></i>Connect to Micro:bit
+        </button>
+        <div class="d-flex align-items-center">
+            <i id="status-icon" class="bi bi-circle-fill me-2 text-secondary"></i>
+            <p id="status" class="mb-0">Not connected</p>
         </div>
+    </div>
+
+    <!-- Step 2: Manual Driving -->
+    <h2 class="mt-4">Step 2: Manual Driving</h2>
+    <div class="row mt-3">
+        <!-- New Keyboard Layout Column -->
+        <div class="col-md-6 mb-4">
+            <h4>Keyboard Controls</h4>
+            <div class="d-flex flex-column align-items-center mt-4">
+                <div class="mb-2">
+                    <button id="key-w" class="btn btn-outline-secondary px-4">W</button>
+                </div>
+                <div>
+                    <button id="key-a" class="btn btn-outline-secondary px-4 me-2">A</button>
+                    <button id="key-s" class="btn btn-outline-secondary px-4 me-2">S</button>
+                    <button id="key-d" class="btn btn-outline-secondary px-4">D</button>
+                </div>
+                <div class="mt-3">
+                    <button id="key-space" class="btn btn-outline-secondary px-5">Space</button>
+                    <div class="text-center mt-2">
+                        <small class="text-muted">Press Space to Stop</small>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <p class="text-muted mb-1">Controls:</p>
+                    <ul class="list-unstyled small text-muted">
+                        <li>W or ↑ : Forward</li>
+                        <li>S or ↓ : Backward</li>
+                        <li>A or ← : Left</li>
+                        <li>D or → : Right</li>
+                        <li>Space : Stop</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Existing Controls Column -->
         <div class="col-md-6">
             <div class="mt-3">
                 <input type="checkbox" id="activate-speed-control" checked>
@@ -63,14 +113,22 @@
             </div>
             <div class="mt-3">
                 <label for="forward-speed">Forward/Backward Speed:</label>
-                <input type="range" id="forward-speed" class="form-range" value="50" min="40" max="70" oninput="updateForwardSpeedValue(this.value)">
-                <span id="forward-speed-value">50</span>
+                <div class="speed-control">
+                    <button class="speed-btn" onclick="adjustSpeed('forward', -1)">-</button>
+                    <span id="forward-speed-value" class="speed-value">50</span>
+                    <input type="hidden" id="forward-speed" value="50">
+                    <button class="speed-btn" onclick="adjustSpeed('forward', 1)">+</button>
+                </div>
                 <small class="form-text text-muted">Adjust the forward speed of the Micro:bit.</small>
             </div>
             <div class="mt-3">
                 <label for="turn-speed">Turn Speed:</label>
-                <input type="range" id="turn-speed" class="form-range" value="55" min="40" max="70" oninput="updateTurnSpeedValue(this.value)">
-                <span id="turn-speed-value">55</span>
+                <div class="speed-control">
+                    <button class="speed-btn" onclick="adjustSpeed('turn', -1)">-</button>
+                    <span id="turn-speed-value" class="speed-value">55</span>
+                    <input type="hidden" id="turn-speed" value="55">
+                    <button class="speed-btn" onclick="adjustSpeed('turn', 1)">+</button>
+                </div>
                 <small class="form-text text-muted">Adjust the turn speed of the Micro:bit.</small>
             </div>
             <div class="mt-3">
@@ -79,6 +137,28 @@
                 <span id="threshold-value">10</span>
                 <small class="form-text text-muted">Adjust the sensitivity to control how many consecutive detections are needed before sending a message.</small>
             </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Ask for the model URL -->
+    <h2 class="mt-4">Step 3: Enter Model URL</h2>
+    <div class="mt-3">
+        <label for="model-url">Model URL:</label>
+        <input type="text" id="model-url" class="form-control">
+        <small class="form-text text-muted">Enter the URL of your Teachable Machine model.<br>
+        Example: https://teachablemachine.withgoogle.com/models/x7UPTyTeq/</small>
+    </div>
+
+    <!-- Step 4: Start Model Prediction -->
+    <h2 class="mt-4">Step 4: Start Model Prediction</h2>
+    <div class="row mt-3">
+        <div class="col-md-6">
+            <div id="webcam-container" class="mt-3" style="background-color: #e9ecef; display: flex; align-items: center; justify-content: center; height: 400px;">
+                <span style="color: #6c757d;">Press Start</span>
+            </div>
+            <div id="label-container" class="mt-3"></div>
+            <p id="class-status" class="mt-3"></p>
+            <button type="button" onclick="init()" class="btn btn-primary w-100 mt-3">Start</button>
         </div>
     </div>
 
@@ -102,9 +182,17 @@
     }
 
     async function init() {
-        const URL = document.getElementById('model-url').value;
-        const modelURL = URL + 'model.json';
-        const metadataURL = URL + 'metadata.json';
+        const modelUrlInput = document.getElementById('model-url');
+        const modelUrl = modelUrlInput.value.trim();
+        
+        if (!modelUrl) {
+            alert('Please enter a model URL first');
+            modelUrlInput.focus();
+            return;
+        }
+
+        const modelURL = modelUrl + 'model.json';
+        const metadataURL = modelUrl + 'metadata.json';
 
         model = await tmImage.load(modelURL, metadataURL);
         maxPredictions = model.getTotalClasses();
@@ -210,43 +298,89 @@
             port = await navigator.serial.requestPort();
             await port.open({ baudRate: 115200 });
             writer = port.writable.getWriter();
+            
+            // Update button
             connectButton.disabled = true;
             connectButton.classList.remove('btn-primary');
             connectButton.classList.add('btn-secondary');
+            
+            // Update status
             status.textContent = 'Connected to Micro:bit';
             status.classList.remove('text-danger');
+            const statusIcon = document.getElementById('status-icon');
+            statusIcon.classList.remove('text-secondary', 'text-danger');
+            statusIcon.classList.add('text-success');
+
+            // Add disconnect listener
+            navigator.serial.addEventListener('disconnect', (event) => {
+                if (event.target === port) {
+                    // Update status
+                    status.textContent = 'Micro:bit disconnected';
+                    status.classList.add('text-danger');
+                    statusIcon.classList.remove('text-success', 'text-secondary');
+                    statusIcon.classList.add('text-danger');
+                    
+                    // Update button
+                    connectButton.disabled = false;
+                    connectButton.classList.remove('btn-secondary');
+                    connectButton.classList.add('btn-primary');
+                    writer = null;
+                }
+            });
+
         } catch (error) {
             status.textContent = 'Failed to connect: ' + error;
             status.classList.add('text-danger');
+            const statusIcon = document.getElementById('status-icon');
+            statusIcon.classList.remove('text-success', 'text-secondary');
+            statusIcon.classList.add('text-danger');
         }
     });
 
+    let currentKey = null;
+
     document.addEventListener('keydown', (event) => {
         let command = '';
+        let keyId = '';
+        
         switch (event.key.toLowerCase()) {
             case 'w':
             case 'arrowup':
                 command = 'forward';
+                keyId = 'key-w';
                 break;
             case 'a':
             case 'arrowleft':
                 command = 'left';
+                keyId = 'key-a';
                 break;
             case 's':
             case 'arrowdown':
                 command = 'backward';
+                keyId = 'key-s';
                 break;
             case 'd':
             case 'arrowright':
                 command = 'right';
+                keyId = 'key-d';
                 break;
             case ' ':
                 command = 'stop';
+                keyId = 'key-space';
                 event.preventDefault(); // Prevent spacebar scrolling
                 break;
             default:
-                return; // Exit if the key is not one of the specified keys
+                return;
         }
+
+        // Highlight the active button
+        if (currentKey) {
+            document.getElementById(currentKey).classList.remove('btn-primary');
+            document.getElementById(currentKey).classList.add('btn-outline-secondary');
+        }
+        document.getElementById(keyId).classList.remove('btn-outline-secondary');
+        document.getElementById(keyId).classList.add('btn-primary');
+        currentKey = keyId;
 
         sendCommand(command);
     });
@@ -277,6 +411,21 @@
         if (writer) {
             await writer.write(data);
         }
+    }
+
+    function adjustSpeed(type, change) {
+        const minSpeed = 40;
+        const maxSpeed = 70;
+        const valueElementId = type === 'forward' ? 'forward-speed-value' : 'turn-speed-value';
+        const inputElementId = type === 'forward' ? 'forward-speed' : 'turn-speed';
+        
+        const valueElement = document.getElementById(valueElementId);
+        const inputElement = document.getElementById(inputElementId);
+        let currentValue = parseInt(valueElement.textContent);
+        
+        currentValue = Math.min(Math.max(currentValue + change, minSpeed), maxSpeed);
+        valueElement.textContent = currentValue;
+        inputElement.value = currentValue;
     }
 
 </script>
