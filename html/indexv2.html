@@ -131,12 +131,6 @@
                 </div>
                 <small class="form-text text-muted">Adjust the turn speed of the Micro:bit.</small>
             </div>
-            <div class="mt-3">
-                <label for="threshold">Sensitivity:</label>
-                <input type="range" id="threshold" class="form-range" value="10" min="1" max="50" oninput="updateThresholdValue(this.value)">
-                <span id="threshold-value">10</span>
-                <small class="form-text text-muted">Adjust the sensitivity to control how many consecutive detections are needed before sending a message.</small>
-            </div>
         </div>
     </div>
 
@@ -159,6 +153,18 @@
             <div id="label-container" class="mt-3"></div>
             <p id="class-status" class="mt-3"></p>
             <button type="button" onclick="init()" class="btn btn-primary w-100 mt-3">Start</button>
+        </div>
+        <div class="col-md-6">
+            <div class="mt-3">
+                <label for="threshold">Sensitivity:</label>
+                <div class="speed-control">
+                    <button class="speed-btn" onclick="adjustSensitivity(-1)">-</button>
+                    <span id="threshold-value" class="speed-value">10</span>
+                    <input type="hidden" id="threshold" value="10">
+                    <button class="speed-btn" onclick="adjustSensitivity(1)">+</button>
+                </div>
+                <small class="form-text text-muted">Adjust the sensitivity to control how many consecutive detections are needed before sending a message.</small>
+            </div>
         </div>
     </div>
 
@@ -424,6 +430,19 @@
         let currentValue = parseInt(valueElement.textContent);
         
         currentValue = Math.min(Math.max(currentValue + change, minSpeed), maxSpeed);
+        valueElement.textContent = currentValue;
+        inputElement.value = currentValue;
+    }
+
+    function adjustSensitivity(change) {
+        const minSensitivity = 1;
+        const maxSensitivity = 50;
+        
+        const valueElement = document.getElementById('threshold-value');
+        const inputElement = document.getElementById('threshold');
+        let currentValue = parseInt(valueElement.textContent);
+        
+        currentValue = Math.min(Math.max(currentValue + change, minSensitivity), maxSensitivity);
         valueElement.textContent = currentValue;
         inputElement.value = currentValue;
     }
