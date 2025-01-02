@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -31,8 +32,9 @@
     <h2 class="mt-4">Step 1: Enter Model URL</h2>
     <div class="mt-3">
         <label for="model-url">Model URL:</label>
-        <input type="text" id="model-url" class="form-control" value="https://teachablemachine.withgoogle.com/models/x7UPTyTeq/">
-        <small class="form-text text-muted">Enter the URL of your Teachable Machine model.</small>
+        <input type="text" id="model-url" class="form-control">
+        <small class="form-text text-muted">Enter the URL of your Teachable Machine model.<br>
+        Example: https://teachablemachine.withgoogle.com/models/x7UPTyTeq/</small>
     </div>
 
     <!-- Step 2: Ask the user to connect Micro:bit -->
@@ -62,19 +64,19 @@
             </div>
             <div class="mt-3">
                 <label for="forward-speed">Forward/Backward Speed:</label>
-                <input type="range" id="forward-speed" class="form-range" value="40" min="20" max="100" oninput="updateForwardSpeedValue(this.value)">
-                <span id="forward-speed-value">40</span>
+                <input type="range" id="forward-speed" class="form-range" value="50" min="40" max="70" oninput="updateForwardSpeedValue(this.value)">
+                <span id="forward-speed-value">50</span>
                 <small class="form-text text-muted">Adjust the forward speed of the Micro:bit.</small>
             </div>
             <div class="mt-3">
                 <label for="turn-speed">Turn Speed:</label>
-                <input type="range" id="turn-speed" class="form-range" value="40" min="20" max="100" oninput="updateTurnSpeedValue(this.value)">
-                <span id="turn-speed-value">40</span>
+                <input type="range" id="turn-speed" class="form-range" value="55" min="40" max="70" oninput="updateTurnSpeedValue(this.value)">
+                <span id="turn-speed-value">55</span>
                 <small class="form-text text-muted">Adjust the turn speed of the Micro:bit.</small>
             </div>
             <div class="mt-3">
                 <label for="threshold">Sensitivity:</label>
-                <input type="range" id="threshold" class="form-range" value="10" min="1" max="100" oninput="updateThresholdValue(this.value)">
+                <input type="range" id="threshold" class="form-range" value="10" min="1" max="50" oninput="updateThresholdValue(this.value)">
                 <span id="threshold-value">10</span>
                 <small class="form-text text-muted">Adjust the sensitivity to control how many consecutive detections are needed before sending a message.</small>
             </div>
@@ -201,40 +203,47 @@
 
     let port;
     let writer;
+    let connectButton = document.getElementById('connect');
+    let status = document.getElementById('status');
 
-    document.getElementById('connect').addEventListener('click', async () => {
+    connectButton.addEventListener('click', async () => {
         try {
             port = await navigator.serial.requestPort();
             await port.open({ baudRate: 115200 });
             writer = port.writable.getWriter();
-            document.getElementById('status').textContent = 'Connected to Micro:bit';
-            // document.getElementById('send').disabled = false;
+            connectButton.disabled = true;
+            connectButton.classList.remove('btn-primary');
+            connectButton.classList.add('btn-secondary');
+            status.textContent = 'Connected to Micro:bit';
+            status.classList.remove('text-danger');
         } catch (error) {
-            document.getElementById('status').textContent = 'Failed to connect: ' + error;
+            status.textContent = 'Failed to connect: ' + error;
+            status.classList.add('text-danger');
         }
     });
 
     document.addEventListener('keydown', (event) => {
         let command = '';
-        switch (event.key) {
+        switch (event.key.toLowerCase()) {
             case 'w':
-            case 'ArrowUp':
+            case 'arrowup':
                 command = 'forward';
                 break;
             case 'a':
-            case 'ArrowLeft':
+            case 'arrowleft':
                 command = 'left';
                 break;
             case 's':
-            case 'ArrowDown':
+            case 'arrowdown':
                 command = 'backward';
                 break;
             case 'd':
-            case 'ArrowRight':
+            case 'arrowright':
                 command = 'right';
                 break;
             case ' ':
                 command = 'stop';
+                event.preventDefault(); // Prevent spacebar scrolling
                 break;
             default:
                 return; // Exit if the key is not one of the specified keys
