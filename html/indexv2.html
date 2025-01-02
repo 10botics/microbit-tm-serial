@@ -219,6 +219,9 @@
             return;
         }
 
+        // Save model URL to sessionStorage
+        sessionStorage.setItem('modelUrl', modelUrl);
+
         const modelURL = modelUrl + 'model.json';
         const metadataURL = modelUrl + 'metadata.json';
 
@@ -487,6 +490,13 @@
         currentValue = Math.min(Math.max(currentValue + change, minSpeed), maxSpeed);
         valueElement.textContent = currentValue;
         inputElement.value = currentValue;
+
+        // Save to sessionStorage
+        if (type === 'forward') {
+            sessionStorage.setItem('forwardSpeed', currentValue.toString());
+        } else {
+            sessionStorage.setItem('turnSpeed', currentValue.toString());
+        }
     }
 
     function adjustSensitivity(change) {
@@ -501,6 +511,51 @@
         valueElement.textContent = currentValue;
         inputElement.value = currentValue;
     }
+
+    // Load saved values from sessionStorage when the page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        // Restore forward speed
+        const savedForwardSpeed = sessionStorage.getItem('forwardSpeed') || '50';
+        document.getElementById('forward-speed').value = savedForwardSpeed;
+        document.getElementById('forward-speed-value').textContent = savedForwardSpeed;
+
+        // Restore turn speed
+        const savedTurnSpeed = sessionStorage.getItem('turnSpeed') || '55';
+        document.getElementById('turn-speed').value = savedTurnSpeed;
+        document.getElementById('turn-speed-value').textContent = savedTurnSpeed;
+
+        // Restore model URL
+        const savedModelUrl = sessionStorage.getItem('modelUrl') || '';
+        document.getElementById('model-url').value = savedModelUrl;
+
+        // Add click handlers for each control button
+        const controlButtons = {
+            'key-w': 'forward',
+            'key-s': 'backward',
+            'key-a': 'left',
+            'key-d': 'right',
+            'key-space': 'stop'
+        };
+
+        for (const [buttonId, command] of Object.entries(controlButtons)) {
+            document.getElementById(buttonId).addEventListener('click', () => {
+                // Reset previous button state
+                if (currentKey) {
+                    document.getElementById(currentKey).classList.remove('btn-primary');
+                    document.getElementById(currentKey).classList.add('btn-outline-secondary');
+                }
+
+                // Update button state
+                const button = document.getElementById(buttonId);
+                button.classList.remove('btn-outline-secondary');
+                button.classList.add('btn-primary');
+                currentKey = buttonId;
+
+                // Send the command
+                sendCommand(command);
+            });
+        }
+    });
 
 </script>
 <footer class="bg-light text-center py-3 mt-5">
