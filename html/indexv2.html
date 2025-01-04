@@ -301,7 +301,7 @@
         const directions = ['forward', 'backward', 'left', 'right', 'stop'];
         directions.forEach(dir => {
             const btn = document.getElementById('model-' + dir);
-            if (dir !== lastSentClass) {  // Only reset buttons that aren't the last sent command
+            if (btn && dir !== lastSentClass) {  // Add null check here
                 btn.classList.remove('btn-primary');
                 btn.classList.add('btn-outline-secondary');
             }
@@ -312,9 +312,11 @@
             const probability = prediction[i].probability;
             const percentage = (probability * 100).toFixed(0);
             
-            // Update button text with probability
+            // Add null check here
             const btn = document.getElementById('model-' + className);
-            btn.textContent = `${className} (${percentage}%)`;
+            if (btn) {
+                btn.textContent = `${className} (${percentage}%)`;
+            }
 
             if (probability > highestProbability) {
                 highestProbability = probability;
