@@ -227,6 +227,18 @@
 
         try {
             model = await tmImage.load(modelURL, metadataURL);
+            
+            // Check for required labels
+            const requiredLabels = ['forward', 'backward', 'left', 'right', 'stop'];
+            const modelLabels = model.getClassLabels();
+            
+            const missingLabels = requiredLabels.filter(label => !modelLabels.includes(label));
+            
+            if (missingLabels.length > 0) {
+                alert(`Model is missing required labels: ${missingLabels.join(', ')}\n\nRequired labels are: ${requiredLabels.join(', ')}`);
+                return;
+            }
+
             maxPredictions = model.getTotalClasses();
 
             const flip = true;
